@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 # ─────────────────────────────────────────────────────────────────────────────
 # Entrypoint for the C++ dev container
 #
@@ -17,12 +17,16 @@ DEVENV_DIR="$HOME/.devenv"
 
 export PATH="/nix/var/nix/profiles/default/bin:$PATH"
 
+# Start the Nix daemon (multi-user install needs it running)
+sudo /nix/var/nix/profiles/default/bin/nix-daemon &>/dev/null &
+sleep 1
+
 # Always operate from the mounted workspace
 cd /workspace
 
-if [[ $# -eq 0 || ( $# -eq 1 && "$1" == "bash" ) ]]; then
+if [[ $# -eq 0 || ( $# -eq 1 && "$1" == "zsh" ) ]]; then
   # Interactive — enter the devshell
-  exec nix develop "$DEVENV_DIR#default" --command bash
+  exec nix develop "$DEVENV_DIR#default" --command zsh
 else
   # Non-interactive — run the given command inside the devshell
   exec nix develop "$DEVENV_DIR#default" --command "$@"
