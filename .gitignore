@@ -1,0 +1,10 @@
+build/
+compile_commands.json
+.cache/
+*.o
+*.a
+*.so
+*.d
+.direnv/
+result
+result-*

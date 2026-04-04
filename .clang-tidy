@@ -1,0 +1,37 @@
+---
+# Enable a broad set; suppress noisy or irrelevant checks for a dev env
+Checks: >
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  bugprone-*,
+  misc-*,
+  -modernize-use-trailing-return-type,
+  -readability-magic-numbers,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -readability-identifier-length,
+  -misc-non-private-member-variables-in-classes,
+
+WarningsAsErrors: ""
+
+HeaderFilterRegex: "src/.*"
+
+CheckOptions:
+  - key:   readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key:   readability-identifier-naming.FunctionCase
+    value: lower_case
+  - key:   readability-identifier-naming.VariableCase
+    value: lower_case
+  - key:   readability-identifier-naming.ConstantCase
+    value: UPPER_CASE
+  - key:   readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key:   modernize-use-default-member-init.UseAssignment
+    value: "1"
+  - key:   cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
+    value: "1"
