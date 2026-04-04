@@ -3,13 +3,14 @@
 # run `just` to list all recipes
 # ─────────────────────────────────────────────────────────────────────────────
 
-set shell := ["bash", "-euo", "pipefail", "-c"]
+set shell := ["zsh", "-euo", "pipefail", "-c"]
 set dotenv-load := true
 
 # Dirs
 build_dir    := "build"
 src_dir      := "src"
 preset       := env_var_or_default("PRESET", "debug")
+
 
 # ── Default: list recipes ─────────────────────────────────────────────────────
 [private]
@@ -156,20 +157,6 @@ cc-entry file:
 loc:
     @find {{src_dir}} \( -name '*.cpp' -o -name '*.cc' -o -name '*.h' -o -name '*.hpp' \) \
       | xargs wc -l | sort -rn | head -20
-
-# ── Docker shortcuts (run from host) ─────────────────────────────────────────
-
-# Build the dev container image
-docker-build:
-    docker compose build
-
-# Open an interactive shell in the container
-docker-shell:
-    docker compose run --rm dev
-
-# Run a just recipe inside the container
-docker-run +args:
-    docker compose run --rm dev just {{args}}
 
 # ── CI gate (runs everything non-interactive) ─────────────────────────────────
 ci: fmt-check (configure "release") (build "release") (test "release") tidy cppcheck

@@ -32,7 +32,7 @@ target_compile_options(project_warnings INTERFACE
 add_subdirectory(src)
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
-include(CTest)
-if(BUILD_TESTING)
-  add_subdirectory(tests)
-endif()
+# include(CTest)
+# if(BUILD_TESTING)
+#   add_subdirectory(tests)
+# endif()

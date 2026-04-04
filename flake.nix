@@ -1,5 +1,5 @@
 {
-  description = "C++ development environment — CLI-native, containerized Linux";
+  description = "C++ development environment — local Nix devshell";
 
   inputs = {
     nixpkgs.url     = "github:NixOS/nixpkgs/nixos-24.11";
@@ -10,6 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
+        isLinux = pkgs.stdenv.isLinux;
         llvm = pkgs.llvmPackages_17;
 
         devPkgs = with pkgs; [
@@ -17,7 +18,6 @@
           llvm.clang          # clang / clang++
           llvm.lld            # fast linker
           llvm.lldb           # lldb debugger
-          gcc13               # gcc / g++ available as fallback
 
           # ── Build ──────────────────────────────────────────────────────────
           cmake
@@ -32,22 +32,10 @@
           cppcheck
           include-what-you-use
 
-          # ── Sanitiser support ──────────────────────────────────────────────
-          # ASan/TSan/UBSan ship with clang — nothing extra needed
-          valgrind
-
-          # ── Debuggers ─────────────────────────────────────────────────────
-          gdb
-          rr                 # record-replay debugger
-
-          # ── Profiling ─────────────────────────────────────────────────────
-          heaptrack
-
-          # ── Editor ────────────────────────────────────────────────────────
-          neovim
-
           # ── Shell ────────────────────────────────────────────────────────
           zsh
+          starship             # cross-shell prompt
+          ncurses              # terminfo / infocmp
 
           # ── CLI utilities ─────────────────────────────────────────────────
           ripgrep
@@ -61,14 +49,23 @@
           curl
           file
           tree
-          strace
-          ltrace
           hexdump
 
           # ── Docs ──────────────────────────────────────────────────────────
           man-pages
           man-pages-posix
-        ];
+        ]
+
+        # ── Linux-only packages ─────────────────────────────────────────────
+        ++ lib.optionals isLinux (with pkgs; [
+          gcc13              # gcc / g++ available as fallback
+          gdb
+          rr                 # record-replay debugger
+          valgrind
+          heaptrack
+          strace
+          ltrace
+        ]);
 
       in {
         # ── Default devshell ─────────────────────────────────────────────────
@@ -82,6 +79,10 @@
             export CXX=clang++
             export LD=lld
             export CCACHE_DIR="$HOME/.ccache"
+            export SHELL="$(command -v zsh)"
+
+            # Starship prompt
+            eval "$(starship init zsh)"
 
             # Link compile_commands.json to repo root for clangd
             if [[ -f build/compile_commands.json && ! -L compile_commands.json ]]; then
