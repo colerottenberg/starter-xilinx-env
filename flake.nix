@@ -50,6 +50,7 @@
           file
           tree
           hexdump
+          dua
 
           # ── Docs ──────────────────────────────────────────────────────────
           man-pages
@@ -88,6 +89,22 @@
             if [[ -f build/compile_commands.json && ! -L compile_commands.json ]]; then
               ln -sf build/compile_commands.json compile_commands.json
             fi
+
+            # Generate .clangd so clangd can find libc++ headers
+            # (the Nix wrapper injects -isystem paths that the unwrapped
+            # clangd driver doesn't see)
+            {
+              echo "CompileFlags:"
+              echo "  Add:"
+              clang++ -v -x c++ /dev/null -fsyntax-only 2>&1 \
+                | sed -n '/#include <...>/,/^End/p' \
+                | grep '^ ' \
+                | sed 's/^ *//' \
+                | while read -r dir; do
+                    echo "    - \"-isystem\""
+                    echo "    - \"$dir\""
+                  done
+            } > .clangd
 
             echo ""
             echo "  ∷ cpp-dev  clang=$(clang --version | awk '{print $3}' | head -1)  cmake=$(cmake --version | awk '{print $3}' | head -1)  ninja=$(ninja --version)"
