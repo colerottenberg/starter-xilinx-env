@@ -12,8 +12,8 @@ struct Order {
   std::string symbol;
   Side side;
   OrderType type;
-  double price;       // Price per unit (0 for market orders)
-  uint64_t quantity;  // Remaining quantity
+  double price;      // Price per unit (0 for market orders)
+  uint64_t quantity; // Remaining quantity
   uint64_t original_quantity;
   uint64_t timestamp; // Nanoseconds since epoch for time priority
 
@@ -38,4 +38,3 @@ struct Trade {
       : trade_id(id), buy_order_id(buy_id), sell_order_id(sell_id), price(p),
         quantity(qty), timestamp(ts) {}
 };
-

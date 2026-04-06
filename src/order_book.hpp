@@ -24,10 +24,9 @@ struct PriceLevel {
   }
 
   void remove_order(uint64_t order_id) {
-    auto it = std::find_if(orders.begin(), orders.end(),
-                           [order_id](const auto &order) {
-                             return order->order_id == order_id;
-                           });
+    auto it = std::find_if(
+        orders.begin(), orders.end(),
+        [order_id](const auto &order) { return order->order_id == order_id; });
     if (it != orders.end()) {
       total_quantity -= (*it)->quantity;
       orders.erase(it);
@@ -104,4 +103,3 @@ private:
   // Helper to remove filled orders
   void cleanup_filled_orders();
 };
-

@@ -61,7 +61,7 @@ bool OrderBook::cancel_order(uint64_t order_id) {
 }
 
 bool OrderBook::modify_order(uint64_t order_id, double new_price,
-                              uint64_t new_quantity) {
+                             uint64_t new_quantity) {
   auto it = orders_.find(order_id);
   if (it == orders_.end()) {
     return false;
@@ -78,7 +78,8 @@ bool OrderBook::modify_order(uint64_t order_id, double new_price,
   auto new_order = std::make_shared<Order>(
       order_id, old_order->symbol, old_order->side, old_order->type, new_price,
       new_quantity,
-      static_cast<uint64_t>(std::chrono::system_clock::now().time_since_epoch().count()));
+      static_cast<uint64_t>(
+          std::chrono::system_clock::now().time_since_epoch().count()));
 
   // Add the new order (this will attempt matching)
   add_order(new_order);
@@ -148,7 +149,8 @@ std::vector<Trade> OrderBook::match_order(std::shared_ptr<Order> order) {
         // Create trade at the resting order's price (price-time priority)
         auto trade = create_trade(
             order, sell_order, ask_price, trade_qty,
-            static_cast<uint64_t>(std::chrono::system_clock::now().time_since_epoch().count()));
+            static_cast<uint64_t>(
+                std::chrono::system_clock::now().time_since_epoch().count()));
         trades.push_back(trade);
 
         // Update quantities
@@ -187,7 +189,8 @@ std::vector<Trade> OrderBook::match_order(std::shared_ptr<Order> order) {
         // Create trade at the resting order's price (price-time priority)
         auto trade = create_trade(
             buy_order, order, bid_price, trade_qty,
-            static_cast<uint64_t>(std::chrono::system_clock::now().time_since_epoch().count()));
+            static_cast<uint64_t>(
+                std::chrono::system_clock::now().time_since_epoch().count()));
         trades.push_back(trade);
 
         // Update quantities
@@ -233,8 +236,8 @@ void OrderBook::add_to_book(std::shared_ptr<Order> order) {
 }
 
 Trade OrderBook::create_trade(std::shared_ptr<Order> buy_order,
-                               std::shared_ptr<Order> sell_order, double price,
-                               uint64_t quantity, uint64_t timestamp) {
+                              std::shared_ptr<Order> sell_order, double price,
+                              uint64_t quantity, uint64_t timestamp) {
   return Trade(next_trade_id_++, buy_order->order_id, sell_order->order_id,
                price, quantity, timestamp);
 }
@@ -273,4 +276,3 @@ void OrderBook::print() const {
 
   std::cout << "\n";
 }
-
