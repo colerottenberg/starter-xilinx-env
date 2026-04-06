@@ -11,7 +11,7 @@ int main() {
   OrderBook book("AAPL");
 
   // Set up trade callback to print trades
-  book.set_trade_callback([](const Trade &trade) {
+  book.set_trade_callback([](const Trade &trade) -> void {
     std::cout << "TRADE: ID=" << trade.trade_id
               << " Buy Order=" << trade.buy_order_id
               << " Sell Order=" << trade.sell_order_id

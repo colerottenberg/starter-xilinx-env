@@ -22,7 +22,7 @@ struct Order {
       : order_id(id), symbol(std::move(sym)), side(s), type(t), price(p),
         quantity(qty), original_quantity(qty), timestamp(ts) {}
 
-  bool is_filled() const { return quantity == 0; }
+  [[nodiscard]] bool is_filled() const { return quantity == 0; }
 };
 
 struct Trade {

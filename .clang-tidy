@@ -1,37 +1,689 @@
+# =============================================================================
+# .clang-tidy — DO-178C DAL-A / LDRA-Equivalent Static Analysis Configuration
+# =============================================================================
+#
+# PURPOSE:
+#   Approximates the static analysis rigor of LDRA Testbed for DO-178C Design
+#   Assurance Level A (DAL-A) software. Covers MISRA C:2012, CERT-C, CWE, and
+#   general safety/portability rules enforceable by clang-tidy.
+#
+# IMPORTANT CAVEATS:
+#   - clang-tidy is NOT a qualified DO-178C tool. For actual certification you
+#     still need a qualified tool (LDRA, Polyspace, Coverity, etc.) per
+#     DO-330 Tool Qualification.
+#   - This config provides a strong FIRST PASS and a CI enforcement layer.
+#   - Several MISRA mandatory rules (e.g. 1.1, 1.3, 2.3) are only partially
+#     covered; supplement with compiler -Wall -Wextra -Wpedantic and a
+#     dedicated MISRA checker.
+#   - WarningsAsErrors is intentionally set to '*' for DAL-A — every finding
+#     must be dispositioned (fixed or formally deviated), not silently passed.
+#
+# RULE TRACEABILITY (for DER/SQA review):
+#   Each check group below maps to the applicable standard(s):
+#     MISRA C:2012     — Mandatory/Required rules for safety-critical C
+#     CERT-C           — SEI CERT C Coding Standard (EXP, ARR, MEM, INT, etc.)
+#     CWE              — Common Weakness Enumeration (runtime safety)
+#     DO-178C §6.3.4   — Software Code Standards (structure, complexity, flow)
+#
+# USAGE:
+#   clang-tidy --config-file=.clang-tidy <file> -- <compile_flags>
+#
+#   Recommended compile flags for embedded bare-metal (Zynq/ARM Cortex-R5):
+#     -std=c11 -mcpu=cortex-r5 -mfpu=vfpv3-d16 -mfloat-abi=hard
+#     -Wall -Wextra -Wpedantic -Werror
+#     -fno-exceptions -fno-rtti (C++ only)
+#
+# =============================================================================
+
 ---
-# Enable a broad set; suppress noisy or irrelevant checks for a dev env
+# ---------------------------------------------------------------------------
+# Global: treat ALL warnings as errors (DAL-A requires zero unreviewed findings)
+# ---------------------------------------------------------------------------
+WarningsAsErrors: '*'
+
+# ---------------------------------------------------------------------------
+# Header filter: analyze all project headers, exclude vendored/BSP headers
+# that are outside your control (adjust regex to match your include tree).
+# Example: analyze src/ and include/ but skip third_party/ and bsp/
+# ---------------------------------------------------------------------------
+HeaderFilterRegex: '(src|include)/.*\.(h|hpp)$'
+
+# ---------------------------------------------------------------------------
+# Use clang-format style for fix suggestions (keeps fixes compliant with
+# your project's code style standard, DO-178C §6.3.4 coding standard req.)
+# ---------------------------------------------------------------------------
+FormatStyle: file
+
+# ---------------------------------------------------------------------------
+# CHECK CONFIGURATION
+#
+# Philosophy: enable ALL safety-relevant checks by category wildcard, then
+# selectively disable checks that are inapplicable to bare-metal embedded
+# (e.g. checks that assume hosted POSIX environment).
+# ---------------------------------------------------------------------------
 Checks: >
-  clang-diagnostic-*,
-  clang-analyzer-*,
-  cppcoreguidelines-*,
-  modernize-*,
-  performance-*,
-  readability-*,
-  bugprone-*,
-  misc-*,
-  -modernize-use-trailing-return-type,
-  -readability-magic-numbers,
-  -cppcoreguidelines-avoid-magic-numbers,
-  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
-  -readability-identifier-length,
-  -misc-non-private-member-variables-in-classes,
+  -*,
 
-WarningsAsErrors: ""
+  # -------------------------------------------------------------------------
+  # BUGPRONE — Catches common coding errors and undefined behavior
+  # Maps to: MISRA C:2012 Rules 1.3, 7.x, 12.x, 13.x, 14.x; CERT-C EXP
+  # -------------------------------------------------------------------------
+  bugprone-assert-side-effect,
+  bugprone-bad-signal-to-kill-thread,
+  bugprone-branch-clone,
+  bugprone-copy-constructor-init,
+  bugprone-dangling-handle,
+  bugprone-dynamic-static-initializers,
+  bugprone-exception-escape,
+  bugprone-implicit-widening-of-multiplication-result,
+  bugprone-incorrect-roundings,
+  bugprone-infinite-loop,
+  bugprone-integer-division,
+  bugprone-macro-parentheses,
+  bugprone-macro-repeated-side-effects,
+  bugprone-misplaced-operator-in-strlen-in-alloc,
+  bugprone-misplaced-widening-cast,
+  bugprone-move-forwarding-reference,
+  bugprone-multiple-statement-macro,
+  bugprone-narrowing-conversions,
+  bugprone-no-escape,
+  bugprone-not-null-terminated-result,
+  bugprone-parent-virtual-call,
+  bugprone-posix-return,
+  bugprone-redundant-branch-condition,
+  bugprone-reserved-identifier,
+  bugprone-shared-ptr-array-mismatch,
+  bugprone-signal-handler,
+  bugprone-signed-char-misuse,
+  bugprone-sizeof-container,
+  bugprone-sizeof-expression,
+  bugprone-spuriously-wake-up-functions,
+  bugprone-string-constructor,
+  bugprone-string-integer-assignment,
+  bugprone-string-literal-with-embedded-nul,
+  bugprone-stringview-nullptr,
+  bugprone-suspicious-enum-usage,
+  bugprone-suspicious-include,
+  bugprone-suspicious-memory-compare,
+  bugprone-suspicious-memset-usage,
+  bugprone-suspicious-missing-comma,
+  bugprone-suspicious-semicolon,
+  bugprone-suspicious-string-compare,
+  bugprone-swapped-arguments,
+  bugprone-terminating-continue,
+  bugprone-throw-keyword-missing,
+  bugprone-too-small-loop-condition,
+  bugprone-unchecked-optional-access,
+  bugprone-undefined-memory-manipulation,
+  bugprone-unhandled-exception-at-new,
+  bugprone-unhandled-self-assignment,
+  bugprone-unused-raii,
+  bugprone-unused-return-value,
+  bugprone-use-after-move,
+  bugprone-virtual-near-miss,
 
-HeaderFilterRegex: "src/.*"
+  # -------------------------------------------------------------------------
+  # CERT-C / CERT-C++ — SEI CERT Secure Coding Standard
+  # Maps to: DO-178C robustness; MISRA C:2012 Directives 4.1, 4.6, 4.7
+  # -------------------------------------------------------------------------
+  cert-dcl03-c,
+  cert-dcl16-c,
+  cert-dcl37-c,
+  cert-dcl50-cpp,
+  cert-dcl51-cpp,
+  cert-dcl54-cpp,
+  cert-dcl58-cpp,
+  cert-dcl59-cpp,
+  cert-env33-c,
+  cert-err09-cpp,
+  cert-err33-c,
+  cert-err34-c,
+  cert-err52-cpp,
+  cert-err58-cpp,
+  cert-err60-cpp,
+  cert-err61-cpp,
+  cert-exp42-c,
+  cert-exp45-c,
+  cert-exp46-c,
+  cert-fio38-c,
+  cert-flp30-c,
+  cert-flp37-c,
+  cert-int09-c,
+  cert-mem57-cpp,
+  cert-msc30-c,
+  cert-msc32-c,
+  cert-msc50-cpp,
+  cert-msc51-cpp,
+  cert-oop11-cpp,
+  cert-oop54-cpp,
+  cert-oop57-cpp,
+  cert-oop58-cpp,
+  cert-pos44-c,
+  cert-pos47-c,
+  cert-sig30-c,
+  cert-str34-c,
 
+  # -------------------------------------------------------------------------
+  # CLANG-ANALYZER — Path-sensitive static analysis (Clang SA)
+  # Maps to: DO-178C structural coverage objectives; CWE runtime errors
+  # -------------------------------------------------------------------------
+  clang-analyzer-core.CallAndMessage,
+  clang-analyzer-core.DivideZero,
+  clang-analyzer-core.NonNullParamChecker,
+  clang-analyzer-core.NullDereference,
+  clang-analyzer-core.StackAddressEscape,
+  clang-analyzer-core.UndefinedBinaryOperatorResult,
+  clang-analyzer-core.VLASize,
+  clang-analyzer-core.uninitialized.ArraySubscript,
+  clang-analyzer-core.uninitialized.Assign,
+  clang-analyzer-core.uninitialized.Branch,
+  clang-analyzer-core.uninitialized.CapturedBlockVariable,
+  clang-analyzer-core.uninitialized.UndefReturn,
+  clang-analyzer-cplusplus.InnerPointer,
+  clang-analyzer-cplusplus.Move,
+  clang-analyzer-cplusplus.NewDelete,
+  clang-analyzer-cplusplus.NewDeleteLeaks,
+  clang-analyzer-cplusplus.PlacementNew,
+  clang-analyzer-cplusplus.PureVirtualCall,
+  clang-analyzer-cplusplus.STLAlgorithmModeling,
+  clang-analyzer-cplusplus.SelfAssignment,
+  clang-analyzer-cplusplus.SmartPtr,
+  clang-analyzer-deadcode.DeadStores,
+  clang-analyzer-nullability.NullPassedToNonnull,
+  clang-analyzer-nullability.NullReturnedFromNonnull,
+  clang-analyzer-nullability.NullableDereferenced,
+  clang-analyzer-nullability.NullablePassedToNonnull,
+  clang-analyzer-nullability.NullableReturnedFromNonnull,
+  clang-analyzer-optin.cplusplus.UninitializedObject,
+  clang-analyzer-optin.cplusplus.VirtualCall,
+  clang-analyzer-optin.mpi.MPI-Checker,
+  clang-analyzer-optin.performance.Padding,
+  clang-analyzer-security.FloatLoopCounter,
+  clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  clang-analyzer-security.insecureAPI.UncheckedReturn,
+  clang-analyzer-security.insecureAPI.bcmp,
+  clang-analyzer-security.insecureAPI.bcopy,
+  clang-analyzer-security.insecureAPI.bzero,
+  clang-analyzer-security.insecureAPI.getpw,
+  clang-analyzer-security.insecureAPI.gets,
+  clang-analyzer-security.insecureAPI.mkstemp,
+  clang-analyzer-security.insecureAPI.mktemps,
+  clang-analyzer-security.insecureAPI.rand,
+  clang-analyzer-security.insecureAPI.strcpy,
+  clang-analyzer-security.insecureAPI.vfork,
+  clang-analyzer-unix.API,
+  clang-analyzer-unix.Malloc,
+  clang-analyzer-unix.MallocSizeof,
+  clang-analyzer-unix.MismatchedDeallocator,
+  clang-analyzer-unix.StdCLibraryFunctions,
+  clang-analyzer-unix.cstring.BadSizeArg,
+  clang-analyzer-unix.cstring.NullArg,
+
+  # -------------------------------------------------------------------------
+  # CONCURRENCY — Critical for RTOS / ARINC-653 partition software
+  # Maps to: DO-178C §6.3.4 (data coupling); MISRA C:2012 Rule 1.3
+  # Note: enable if your DAL-A partition uses shared memory or ISR/task comm
+  # -------------------------------------------------------------------------
+  # clang-analyzer-alpha.unix.PthreadLock,   # uncomment if pthreads used
+  # clang-analyzer-alpha.cplusplus.STLAlgorithmModeling,
+
+  # -------------------------------------------------------------------------
+  # CPPCOREGUIDELINES — C++ Core Guidelines enforcement
+  # Maps to: MISRA C++:2008 / JSF++ AV rules (structural safety)
+  # -------------------------------------------------------------------------
+  cppcoreguidelines-avoid-const-or-ref-data-members,
+  cppcoreguidelines-avoid-goto,
+  cppcoreguidelines-avoid-non-const-global-variables,
+  cppcoreguidelines-c-copy-assignment-signature,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-interfaces-global-init,
+  cppcoreguidelines-macro-usage,
+  cppcoreguidelines-narrowing-conversions,
+  cppcoreguidelines-no-malloc,
+  cppcoreguidelines-prefer-member-initializer,
+  cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  cppcoreguidelines-pro-bounds-constant-array-index,
+  cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  cppcoreguidelines-pro-type-const-cast,
+  cppcoreguidelines-pro-type-cstyle-cast,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-pro-type-reinterpret-cast,
+  cppcoreguidelines-pro-type-static-downcast,
+  cppcoreguidelines-pro-type-union-access,
+  cppcoreguidelines-pro-type-vararg,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-special-member-functions,
+  cppcoreguidelines-virtual-class-destructor,
+
+  # -------------------------------------------------------------------------
+  # MISC — Miscellaneous checks (const-correctness, redundant code, etc.)
+  # Maps to: MISRA C:2012 Rules 8.x, 11.x (type qualification & casting)
+  # -------------------------------------------------------------------------
+  misc-confusable-identifiers,
+  misc-const-correctness,
+  misc-definitions-in-headers,
+  misc-misplaced-const,
+  misc-new-delete-overloads,
+  misc-no-recursion,
+  misc-non-copyable-objects,
+  misc-non-private-member-variables-in-classes,
+  misc-redundant-expression,
+  misc-static-assert,
+  misc-throw-by-value-catch-by-reference,
+  misc-unconventional-assign-operator,
+  misc-uniqueptr-reset-release,
+  misc-unused-alias-decls,
+  misc-unused-parameters,
+  misc-unused-using-decls,
+  misc-use-anonymous-namespace,
+
+  # -------------------------------------------------------------------------
+  # MODERNIZE — Enforce safe, unambiguous modern C++ idioms
+  # Rationale: reduces implicit behavior surprises in safety-critical code
+  # -------------------------------------------------------------------------
+  modernize-avoid-bind,
+  modernize-avoid-c-arrays,
+  modernize-concat-nested-namespaces,
+  modernize-deprecated-headers,
+  modernize-deprecated-ios-base-aliases,
+  modernize-loop-convert,
+  modernize-macro-to-enum,
+  modernize-make-shared,
+  modernize-make-unique,
+  modernize-pass-by-value,
+  modernize-raw-string-literal,
+  modernize-redundant-void-arg,
+  modernize-replace-auto-ptr,
+  modernize-replace-disallow-copy-and-assign-macro,
+  modernize-replace-random-shuffle,
+  modernize-return-braced-init-list,
+  modernize-shrink-to-fit,
+  modernize-type-traits,
+  modernize-unary-static-assert,
+  modernize-use-auto,
+  modernize-use-bool-literals,
+  modernize-use-default-member-init,
+  modernize-use-emplace,
+  modernize-use-equals-default,
+  modernize-use-equals-delete,
+  modernize-use-nodiscard,
+  modernize-use-noexcept,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-ranges,
+  modernize-use-starts-ends-with,
+  modernize-use-std-format,
+  modernize-use-std-numbers,
+  modernize-use-std-print,
+  modernize-use-transparent-functors,
+  modernize-use-uncaught-exceptions,
+  modernize-use-using,
+
+  # -------------------------------------------------------------------------
+  # PERFORMANCE — Avoid runtime inefficiency that masks timing violations
+  # Critical for RTOS partition WCET budgets (ARINC-653, DEOS)
+  # -------------------------------------------------------------------------
+  performance-avoid-endl,
+  performance-faster-string-find,
+  performance-for-range-copy,
+  performance-implicit-conversion-in-loop,
+  performance-inefficient-algorithm,
+  performance-inefficient-string-concatenation,
+  performance-inefficient-vector-operation,
+  performance-move-const-arg,
+  performance-move-constructor-init,
+  performance-no-automatic-move,
+  performance-no-int-to-ptr,
+  performance-noexcept-destructor,
+  performance-noexcept-move-constructor,
+  performance-noexcept-swap,
+  performance-trivially-destructible,
+  performance-type-promotion-in-math-fn,
+  performance-unnecessary-copy-initialization,
+  performance-unnecessary-value-param,
+
+  # -------------------------------------------------------------------------
+  # PORTABILITY — Platform-independent behavior
+  # Maps to: MISRA C:2012 Rules 1.1 (env), 3.x (undefined behavior),
+  #           19.x (preprocessing); DO-178C §6.3.4 portability objective
+  # -------------------------------------------------------------------------
+  portability-restrict-system-includes,
+  portability-simd-intrinsics,
+  portability-std-allocator-const,
+
+  # -------------------------------------------------------------------------
+  # READABILITY — Code clarity; structural complexity metrics
+  # Maps to: DO-178C §6.3.4 code standards; MISRA C:2012 Rules 15.x (flow)
+  # -------------------------------------------------------------------------
+  readability-avoid-const-params-in-decls,
+  readability-avoid-nested-conditional-operator,
+  readability-avoid-return-with-void-value,
+  readability-avoid-unconditional-preprocessor-if,
+  readability-braces-around-statements,
+  readability-const-return-type,
+  readability-container-contains,
+  readability-container-data-pointer,
+  readability-container-size-empty,
+  readability-convert-member-functions-to-static,
+  readability-delete-null-pointer,
+  readability-duplicate-include,
+  readability-else-after-return,
+  readability-enum-initial-value,
+  readability-function-cognitive-complexity,
+  readability-function-size,
+  readability-identifier-length,
+  readability-identifier-naming,
+  readability-implicit-bool-conversion,
+  readability-inconsistent-declaration-parameter-name,
+  readability-isolate-declaration,
+  readability-magic-numbers,
+  readability-make-member-function-const,
+  readability-math-missing-parentheses,
+  readability-misleading-indentation,
+  readability-misplaced-array-index,
+  readability-named-parameter,
+  readability-non-const-parameter,
+  readability-operators-representation,
+  readability-qualified-auto,
+  readability-redundant-access-specifiers,
+  readability-redundant-casting,
+  readability-redundant-control-flow,
+  readability-redundant-declaration,
+  readability-redundant-function-ptr-dereference,
+  readability-redundant-member-init,
+  readability-redundant-preprocessor,
+  readability-redundant-smartptr-get,
+  readability-redundant-string-cstr,
+  readability-redundant-string-init,
+  readability-redundant-void-arg,
+  readability-reference-to-constructed-temporary,
+  readability-simplify-boolean-expr,
+  readability-simplify-subscript-expr,
+  readability-static-accessed-through-instance,
+  readability-static-definition-in-anonymous-namespace,
+  readability-string-compare,
+  readability-suspicious-call-argument,
+  readability-uniqueptr-delete-release,
+  readability-uppercase-literal-suffix,
+  readability-use-anyofallof,
+  readability-use-concise-preprocessor-directives,
+  readability-use-std-min-max,
+
+# =============================================================================
+# CHECK OPTIONS
+# Fine-tuned thresholds for DO-178C DAL-A. All values are conservative —
+# tighten further as your codebase matures.
+# =============================================================================
 CheckOptions:
+
+  # ---------------------------------------------------------------------------
+  # COMPLEXITY — DO-178C §6.3.4 & MISRA C:2012 Advisory Rule 15.5
+  # McCabe cyclomatic complexity limit for DAL-A is typically 10-15.
+  # Cognitive complexity (SonarSource metric) limit set to 15 (stricter than
+  # the clang-tidy default of 25).
+  # DescribeBasicIncrements=true ensures each nesting contributor is flagged,
+  # which is useful for audit trail / code review evidence.
+  # ---------------------------------------------------------------------------
+  - key:   readability-function-cognitive-complexity.Threshold
+    value: '15'
+  - key:   readability-function-cognitive-complexity.DescribeBasicIncrements
+    value: 'true'
+  - key:   readability-function-cognitive-complexity.IgnoreMacros
+    value: 'false'
+
+  # ---------------------------------------------------------------------------
+  # FUNCTION SIZE — DO-178C §6.3.4; MISRA C:2012 structural guidelines
+  # StatementThreshold: max executable statements per function (LDRA default ~50)
+  # LineThreshold: max total lines including comments (set conservative for DAL-A)
+  # BranchThreshold: max branches — direct tie to MC/DC coverage complexity
+  # NestingThreshold: max nesting depth (MISRA advisory: keep ≤4)
+  # ParameterThreshold: max function parameters (MISRA advisory: ≤7)
+  # ---------------------------------------------------------------------------
+  - key:   readability-function-size.StatementThreshold
+    value: '50'
+  - key:   readability-function-size.LineThreshold
+    value: '75'
+  - key:   readability-function-size.BranchThreshold
+    value: '15'
+  - key:   readability-function-size.NestingThreshold
+    value: '4'
+  - key:   readability-function-size.ParameterThreshold
+    value: '7'
+
+  # ---------------------------------------------------------------------------
+  # IDENTIFIER LENGTH — Readability / maintainability for code reviews
+  # DO-178C §6.3.4 requires code to be traceable and reviewable.
+  # Minimum 3 chars avoids cryptic single/double-letter names (except loop vars).
+  # ---------------------------------------------------------------------------
+  - key:   readability-identifier-length.MinimumVariableNameLength
+    value: '3'
+  - key:   readability-identifier-length.MinimumParameterNameLength
+    value: '3'
+  - key:   readability-identifier-length.MinimumLoopCounterNameLength
+    value: '2'
+  - key:   readability-identifier-length.IgnoredVariableNames
+    value: '^(i|j|k|x|y|z)$'
+  - key:   readability-identifier-length.IgnoredParameterNames
+    value: '^(p|q|n|m)$'
+
+  # ---------------------------------------------------------------------------
+  # MAGIC NUMBERS — MISRA C:2012 Rule 5.3 (no undocumented literals)
+  # DO-178C traceability requires constants to be named and traceable to reqs.
+  # IgnoredIntegerValues: 0,1,-1 are universally understood; 2 common in bitmask
+  # IgnoredFloatingPointValues: 0.0, 1.0 for sentinel use
+  # ---------------------------------------------------------------------------
+  - key:   readability-magic-numbers.IgnoredIntegerValues
+    value: '0;1;-1;2'
+  - key:   readability-magic-numbers.IgnoredFloatingPointValues
+    value: '0.0;1.0'
+  - key:   readability-magic-numbers.IgnoreAllFloatingPointValues
+    value: 'false'
+  - key:   readability-magic-numbers.IgnoreBitFieldsWidths
+    value: 'false'
+
+  # ---------------------------------------------------------------------------
+  # NAMING CONVENTIONS — Enforce project naming standard for DO-178C traceability
+  # Adjust to your project's actual naming standard; these are sane defaults for
+  # embedded C++ (MISRA-adjacent: type-safe, prefix-distinguished).
+  # ---------------------------------------------------------------------------
+  - key:   readability-identifier-naming.NamespaceCase
+    value: 'lower_case'
   - key:   readability-identifier-naming.ClassCase
-    value: CamelCase
+    value: 'CamelCase'
+  - key:   readability-identifier-naming.StructCase
+    value: 'CamelCase'
+  - key:   readability-identifier-naming.EnumCase
+    value: 'CamelCase'
+  - key:   readability-identifier-naming.EnumConstantCase
+    value: 'UPPER_CASE'
   - key:   readability-identifier-naming.FunctionCase
-    value: lower_case
+    value: 'lower_case'
+  - key:   readability-identifier-naming.MethodCase
+    value: 'lower_case'
+  - key:   readability-identifier-naming.MemberCase
+    value: 'lower_case'
+  - key:   readability-identifier-naming.MemberSuffix
+    value: '_'
+  - key:   readability-identifier-naming.ParameterCase
+    value: 'lower_case'
   - key:   readability-identifier-naming.VariableCase
-    value: lower_case
+    value: 'lower_case'
+  - key:   readability-identifier-naming.GlobalVariableCase
+    value: 'lower_case'
+  - key:   readability-identifier-naming.GlobalVariablePrefix
+    value: 'g_'
+  - key:   readability-identifier-naming.StaticVariableCase
+    value: 'lower_case'
+  - key:   readability-identifier-naming.StaticVariablePrefix
+    value: 's_'
   - key:   readability-identifier-naming.ConstantCase
-    value: UPPER_CASE
+    value: 'UPPER_CASE'
+  - key:   readability-identifier-naming.ConstantPrefix
+    value: 'k'
+  - key:   readability-identifier-naming.MacroDefinitionCase
+    value: 'UPPER_CASE'
+  - key:   readability-identifier-naming.TypedefCase
+    value: 'CamelCase'
+  - key:   readability-identifier-naming.TypedefSuffix
+    value: '_t'
   - key:   readability-identifier-naming.TemplateParameterCase
-    value: CamelCase
-  - key:   modernize-use-default-member-init.UseAssignment
-    value: "1"
-  - key:   cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
-    value: "1"
+    value: 'CamelCase'
+
+  # ---------------------------------------------------------------------------
+  # NARROWING CONVERSIONS — MISRA C:2012 Rules 10.1–10.7 (essential type model)
+  # WarnOnIntegerNarrowingConversion: flag all integer→integer narrowing
+  # WarnOnFloatingPointNarrowingConversion: flag double→float etc.
+  # WarnOnBitfieldNarrowingConversion: flag struct bitfield truncation
+  # WarnOnEquivalentBitWidth: MISRA 10.3 — same-width but different sign is still
+  # a violation. Set true for maximum safety.
+  # ---------------------------------------------------------------------------
+  - key:   cppcoreguidelines-narrowing-conversions.WarnOnIntegerNarrowingConversion
+    value: 'true'
+  - key:   cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
+    value: 'true'
+  - key:   cppcoreguidelines-narrowing-conversions.WarnOnBitfieldNarrowingConversion
+    value: 'true'
+  - key:   cppcoreguidelines-narrowing-conversions.WarnOnEquivalentBitWidth
+    value: 'true'
+  - key:   bugprone-narrowing-conversions.WarnOnIntegerNarrowingConversion
+    value: 'true'
+  - key:   bugprone-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
+    value: 'true'
+
+  # ---------------------------------------------------------------------------
+  # MACRO USAGE — MISRA C:2012 Rules 20.x; JSF++ AV Rules 29-31
+  # AllowedRegexp: permit standard NDEBUG / assert guards and HAL-style macros.
+  # Adjust regex to explicitly allow your project's approved macros.
+  # ---------------------------------------------------------------------------
+  - key:   cppcoreguidelines-macro-usage.AllowedRegexp
+    value: '^(NDEBUG|ASSERT|STATIC_ASSERT|HAL_.*|BSP_.*|DEOS_.*|RTOS_.*)$'
+
+  # ---------------------------------------------------------------------------
+  # NO RECURSION — MISRA C:2012 Rule 17.2 (Mandatory); JSF++ AV Rule 119
+  # Recursion is PROHIBITED in DAL-A software because stack depth is
+  # unbounded and WCET analysis becomes intractable.
+  # misc-no-recursion enforces this at the static analysis level.
+  # ---------------------------------------------------------------------------
+  # (no options needed — enabling the check is sufficient)
+
+  # ---------------------------------------------------------------------------
+  # NO DYNAMIC MEMORY — MISRA C:2012 Rule 21.3; JSF++ AV Rule 206
+  # cppcoreguidelines-no-malloc flags malloc/free/calloc/realloc usage.
+  # For DAL-A: dynamic allocation is typically PROHIBITED after init phase.
+  # All heap use must be statically bounded or confined to startup.
+  # ---------------------------------------------------------------------------
+  # (no options needed — enabling the check is sufficient)
+
+  # ---------------------------------------------------------------------------
+  # GOTO — MISRA C:2012 Rule 15.1 (Required); JSF++ AV Rule 189
+  # goto is prohibited. cppcoreguidelines-avoid-goto enforces this.
+  # ---------------------------------------------------------------------------
+  # (no options needed — enabling the check is sufficient)
+
+  # ---------------------------------------------------------------------------
+  # ASSERT SIDE EFFECTS — MISRA C:2012 Rule 13.x
+  # Asserts must have no side effects since they may be compiled out in
+  # release builds. bugprone-assert-side-effect enforces this.
+  # ---------------------------------------------------------------------------
+  - key:   bugprone-assert-side-effect.AssertMacros
+    value: 'ASSERT,assert,DEOS_ASSERT,BSP_ASSERT'
+  - key:   bugprone-assert-side-effect.CheckFunctionCalls
+    value: 'true'
+
+  # ---------------------------------------------------------------------------
+  # UNUSED RETURN VALUES — MISRA C:2012 Rule 17.7 (Required)
+  # All non-void function return values must be used or explicitly cast to void.
+  # CheckedFunctions covers the POSIX/stdlib functions LDRA flags by default.
+  # ---------------------------------------------------------------------------
+  - key:   bugprone-unused-return-value.CheckedFunctions
+    value: >
+      ::std::async;::std::launder;::std::remove;::std::remove_if;
+      ::std::unique;::std::unique_ptr::release;::std::basic_string::empty;
+      ::std::vector::empty;::std::back_inserter;::std::distance;
+      ::std::find;::std::find_if;::std::lower_bound;::std::upper_bound;
+      ::std::equal_range;
+
+  # ---------------------------------------------------------------------------
+  # SIGNED/UNSIGNED CHAR — MISRA C:2012 Rule 10.1; CERT-C STR34-C
+  # Signed char used as integer is a common source of subtle sign-extension bugs
+  # in embedded code (e.g., reading hardware registers, serial buffers).
+  # ---------------------------------------------------------------------------
+  - key:   bugprone-signed-char-misuse.DiagnoseSignedUnsignedCharComparisons
+    value: 'true'
+
+  # ---------------------------------------------------------------------------
+  # SIZEOF — MISRA C:2012 Rule 12.x; common embedded pointer-arithmetic trap
+  # ---------------------------------------------------------------------------
+  - key:   bugprone-sizeof-expression.WarnOnSizeOfConstant
+    value: 'true'
+  - key:   bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression
+    value: 'true'
+  - key:   bugprone-sizeof-expression.WarnOnSizeOfPointer
+    value: 'true'
+  - key:   bugprone-sizeof-expression.WarnOnSizeOfCompareToConstant
+    value: 'true'
+
+  # ---------------------------------------------------------------------------
+  # CONST CORRECTNESS — MISRA C:2012 Rule 8.13; data flow integrity
+  # ---------------------------------------------------------------------------
+  - key:   misc-const-correctness.TransformValues
+    value: 'true'
+  - key:   misc-const-correctness.TransformPointersAsValues
+    value: 'false'
+  - key:   misc-const-correctness.TransformReferences
+    value: 'true'
+  - key:   misc-const-correctness.WarnPointersAsValues
+    value: 'true'
+
+  # ---------------------------------------------------------------------------
+  # GLOBAL NON-CONST VARIABLES — MISRA C:2012 Rule 8.9 (advisory)
+  # Strongly discouraged in DAL-A; data coupling analysis per DO-178C §6.4.4.2
+  # requires all global data access to be documented and justified.
+  # ---------------------------------------------------------------------------
+  # (no options needed — cppcoreguidelines-avoid-non-const-global-variables
+  # is enabled above; add NOLINT comments with deviation justification)
+
+  # ---------------------------------------------------------------------------
+  # SYSTEM INCLUDES RESTRICTION — Portability for freestanding embedded targets
+  # Maps to: MISRA C:2012 Rules 21.x (stdlib prohibition on safety-critical targets)
+  # Allowlist only headers valid in your freestanding environment.
+  # Remove/add as appropriate for your BSP and RTOS headers.
+  # ---------------------------------------------------------------------------
+  - key:   portability-restrict-system-includes.Includes
+    value: >
+      stdint.h;stddef.h;stdbool.h;stdarg.h;limits.h;float.h;
+      inttypes.h;string.h;assert.h
+
+  # ---------------------------------------------------------------------------
+  # PERFORMANCE / noexcept — Avionics RTOS software must not propagate exceptions
+  # noexcept annotation on move constructors/destructors enables static
+  # analysis tools to verify exception-free paths through the call graph.
+  # ---------------------------------------------------------------------------
+  # (no options needed — performance-noexcept-* checks are enabled above)
+
+  # ---------------------------------------------------------------------------
+  # OPERATOR REPRESENTATION — Readability in code reviews / inspections
+  # Maps to: DO-178C code review checklist; prefer 'and','or','not' alternatives
+  # disabled for embedded C where && || are universal
+  # ---------------------------------------------------------------------------
+  - key:   readability-operators-representation.BinaryOperators
+    value: ''
+  - key:   readability-operators-representation.OverloadedOperators
+    value: ''
+
+# =============================================================================
+# DEVIATIONS — DO-178C requires formal deviation records for any NOLINT usage.
+#
+# In your source code, suppress individual findings ONLY with documented
+# deviation justifications in the format:
+#
+#   // NOLINT(check-name) [DEV-XXXX]: <rationale> <MISRA rule reference>
+#
+# Example:
+#   void* p = malloc(size); // NOLINT(cppcoreguidelines-no-malloc) [DEV-0042]:
+#                           // Pre-init heap allocation, bounded by design.
+#                           // Deviation from MISRA C:2012 Rule 21.3. See SRS-0099.
+#
+# All NOLINT annotations must be reviewed in code inspection and logged in the
+# Software Quality Assurance (SQA) deviation register.
+# =============================================================================
